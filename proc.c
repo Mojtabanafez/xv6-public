@@ -6,11 +6,15 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
-
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
+struct proc_info
+{
+  int pid;
+  int memsize;
+};
 
 static struct proc *initproc;
 
@@ -532,23 +536,50 @@ procdump(void)
     cprintf("\n");
   }
 }
-
-int
-rps(){
+struct proc_info * rps(void)
+{
+  
   struct proc *p;
   sti();
 
   acquire(&ptable.lock);
   cprintf("name \t pid \t state \t \n");
-  for(p = ptable.proc; p<&ptable.proc[NPROC]; p++){
-    if( p->state == SLEEPING )
-      cprintf("%s \t %d \t SLEEPING \t \n ", p->name, p->pid );
-    else if( p->state == RUNNING )
-      cprintf("%s \t %d \t RUNNING \t \n ", p->name, p->pid);
-    else if(p->state == RUNNABLE)
-      cprintf("%s \t %d \t RUNNABLE \t \n ", p->name, p->pid);
+  int cnt=0;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->state == SLEEPING)
+      cprintf("%s \t %d \t SLEEPING \t size %d \t \n ", p->name, p->pid, p->sz);
+    else if (p->state == RUNNING)
+    {
+      cnt++;
+      cprintf("%s \t %d \t RUNNING \t  size %d \t \n ", p->name, p->pid, p->sz);
+    }
+    else if (p->state == RUNNABLE)
+    {
+      cnt++;
+      cprintf("%s \t %d \t RUNNABLE \t  size %d \t \n ", p->name, p->pid, p->sz);
+    }
   }
+  // = (struct proc_info*)(cnt*sizeof(struct proc_info));
+  struct proc_info *R_proc = (struct proc_info *)(cnt * (sizeof(struct proc_info)));
+  int i = 0;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->state == RUNNING)
+    {
+      R_proc[i].pid = p->pid;
+      R_proc[i].memsize = p->sz;
+      i++;
+    }
+    else if (p->state == RUNNABLE)
+    {
+      R_proc[i].pid = p->pid;
+      R_proc[i].memsize = p->sz;
+      cprintf("%s \t %d \t RUNNABLE \t  size %d \t \n ", p->name, R_proc[i].pid, p->sz);
+      i++;
+    }
+  }
+   
   release(&ptable.lock);
-
-  return 22;
+  return R_proc;
 }

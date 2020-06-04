@@ -2,6 +2,7 @@ struct buf;
 struct context;
 struct file;
 struct inode;
+struct proc_info;
 struct pipe;
 struct proc;
 struct rtcdate;
@@ -121,7 +122,7 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 // new syscall
-int             rps(void);
+struct proc_info * rps(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

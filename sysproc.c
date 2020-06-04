@@ -90,8 +90,9 @@ sys_uptime(void)
   return xticks;
 }
 
-int 
-sys_rps(void){
+struct proc_info*
+sys_rps(void)
+{
 
   return rps();
 }
