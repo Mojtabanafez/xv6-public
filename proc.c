@@ -538,31 +538,30 @@ procdump(void)
 }
 struct proc_info *rps(void)
 {
-  
   struct proc *p;
   sti();
-
   acquire(&ptable.lock);
-  cprintf("name \t pid \t state \t \n");
-  int cnt=0;
+  
+  
   // claculate count of running and runnable process 
-  // we could define an dynamic array and realocate it size
+  // we could define an dynamic array and realocate it size but not have realloc in here in xv6
+  int cnt = 0;
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
     if (p->state == RUNNING)
     {
       cnt++;
-      cprintf("%s \t %d \t RUNNING \t  size %d \t \n ", p->name, p->pid, p->sz);
     }
     else if (p->state == RUNNABLE)
     {
       cnt++;
-      cprintf("%s \t %d \t RUNNABLE \t  size %d \t \n ", p->name, p->pid, p->sz);
     }
   }
-  struct proc_info *R_proc = (struct proc_info *)(cnt * (sizeof(struct proc_info)));
-  int i = 0;
+
+
   // store process
+  int i = 0;
+  struct proc_info *R_proc = (struct proc_info *)(cnt * (sizeof(struct proc_info)));
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
     if (p->state == RUNNING)
@@ -578,7 +577,67 @@ struct proc_info *rps(void)
       i++;
     }
   }
-   
+
+
+  //sort with process memory size
+  for(int k=0; k<cnt; k++){
+    for(int h=k+1; h<cnt; h++ ){
+      if(R_proc[k].memsize > R_proc[h].memsize ){
+        struct proc_info tmp = R_proc[k];
+        R_proc[k] = R_proc[h];
+        R_proc[h] = tmp;
+      }
+    }
+  }
+   for(int k=0; k<cnt; k++){
+      cprintf("pid:  %d           memeory size:  %d         \n ", R_proc[k].pid, R_proc[k].memsize);
+   }
+
+
+            // try to create dynamic array
+            // problem: it has not realloc function
+            // with alloc func it take longer time
+
+
+/* 
+  int s=2;
+  int u=0;
+  struct proc_info *R_proc = (struct proc_info *)(s * (sizeof(struct proc_info)));
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->state == RUNNING)
+    {
+      struct proc_info *R = (struct proc_info* )((sizeof(struct proc_info)));;
+      R->pid = p->pid;
+      R->memsize = p->sz;
+      if (u >= s)
+      {
+        s *= 2;
+        R_proc = (struct proc_info *)malloc( s * sizeof(struct proc_info));
+      }
+      R_proc[u] = *R;
+      u++;
+    }
+    else if (p->state == RUNNABLE)
+    {
+      struct proc_info *R = (struct proc_info *)((sizeof(struct proc_info)));
+      R->pid = p->pid;
+      R->memsize = p->sz;
+      if (u >= s)
+      {
+        s *= 2;
+        R_proc = (struct proc_info *)malloc(s * sizeof(struct proc_info));
+       
+      }
+      R_proc[u] = *R;
+      u++;
+    }
+  }
+ cprintf("ffff\n");
+  for(int j=0; j<cnt; j++){
+    cprintf("%d    %d   \n ", R_proc[j].pid, R_proc[j].memsize);
+  }
+*/
   release(&ptable.lock);
   return R_proc;
 }
