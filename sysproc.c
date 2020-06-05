@@ -93,6 +93,5 @@ sys_uptime(void)
 struct proc_info*
 sys_rps(void)
 {
-
   return rps();
 }

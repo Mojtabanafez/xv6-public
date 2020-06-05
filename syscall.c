@@ -103,6 +103,7 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
+// new system call
 extern int sys_rps(void);
 
 static int (*syscalls[])(void) = {
@@ -127,6 +128,7 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+//new system call
 [SYS_rps]     sys_rps
 };
 

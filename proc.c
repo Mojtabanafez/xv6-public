@@ -536,7 +536,7 @@ procdump(void)
     cprintf("\n");
   }
 }
-struct proc_info * rps(void)
+struct proc_info *rps(void)
 {
   
   struct proc *p;

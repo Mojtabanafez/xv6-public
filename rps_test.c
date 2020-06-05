@@ -5,11 +5,16 @@
 int main(int argc, char *argv[])
 {
     int a = fork();
-    if(a==0){
+
+    printf(1, "%d \n", (int)getpid());
+   // growproc(222000);
+    if (a == 0)
+    {
         fork();
         fork();
         while (1)
         {
         }
-    }
+   }
+   exit();
 }
