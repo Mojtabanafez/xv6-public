@@ -22,3 +22,4 @@
 #define SYS_close  21
 // new sys call number
 #define SYS_rps    22
+#define SYS_waitx 23

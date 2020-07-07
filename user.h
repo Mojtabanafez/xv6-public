@@ -23,8 +23,12 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-// new system cal
+// new system cal phase_1
 struct proc_info *rps(void);
+// new system cal phase_2
+int waitx(int *wtime, int *rtime);
+
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);

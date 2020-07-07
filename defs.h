@@ -119,7 +119,10 @@ void            setproc(struct proc*);
 void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(void);
-void            wakeup(void*);
+//new syscall => phase_2
+int             waitx(int *, int *);
+
+void            wakeup(void*); 
 void            yield(void);
 // new syscall
 struct proc_info * rps(void);

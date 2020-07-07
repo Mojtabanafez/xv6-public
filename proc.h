@@ -48,7 +48,11 @@ struct proc {
   int killed;                  // If non-zero, have been killed
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
-  char name[16];               // Process name (debugging)
+  char name[16];  
+               // Process name (debugging)
+
+  //neww field ==> phase_2
+  int stime, etime, rtime, iotime;
 };
 
 // Process memory is laid out contiguously, low addresses first:
