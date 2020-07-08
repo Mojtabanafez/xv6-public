@@ -788,3 +788,19 @@ int waitx(int *wtime, int *rtime)
   release(&ptable.lock);
   return R_proc;
 }
+int set_priority(int pid, int priority)
+{
+  struct proc *p;
+
+  acquire(&ptable.lock);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->pid == pid)
+    {
+      p->priority = priority;
+      break;
+    }
+  }
+  release(&ptable.lock);
+  return p->priority;
+}

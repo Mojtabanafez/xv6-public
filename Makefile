@@ -183,6 +183,8 @@ UPROGS=\
 	_rps\
 	_rps_test\
 	_zombie\
+	_nice\
+
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

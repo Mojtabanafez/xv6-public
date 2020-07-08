@@ -27,7 +27,7 @@ int uptime(void);
 struct proc_info *rps(void);
 // new system cal phase_2
 int waitx(int *wtime, int *rtime);
-
+int set_priority(int, int);
 
 // ulib.c
 int stat(const char*, struct stat*);
