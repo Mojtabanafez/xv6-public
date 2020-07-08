@@ -704,20 +704,20 @@ int waitx(int *wtime, int *rtime)
 
       if (p->state == RUNNING)
       {
-        cprintf("pid:%d   memeory size:%d  priority:%d  name:%s state:Running\n ", p->pid, p->sz, p->priority, p->name);
+        cprintf("pid:%d     priority:%d    name:%s     state:Running\n ", p->pid,  p->priority, p->name);
         R_proc[i].pid = p->pid;
         R_proc[i].memsize = p->sz;
         i++;
       }
       else if (p->state == RUNNABLE)
       {
-        cprintf("pid:%d   memeory size:%d  priority:%d  name:%s state:runnable \n", p->pid, p->sz, p->priority, p->name);
+        cprintf("pid:%d     priority:%d    name:%s     state:runnable \n", p->pid, p->priority, p->name);
         R_proc[i].pid = p->pid;
         R_proc[i].memsize = p->sz;
         i++;
       }
       else if(p->state == SLEEPING){
-          cprintf("pid:%d   memeory size:%d  priority:%d  name:%s state:sleeping \n", p->pid, p->sz, p->priority, p->name);
+          cprintf("pid:%d     priority:%d    name:%s     state:sleeping \n", p->pid, p->priority, p->name);
       }
     }
 
@@ -734,12 +734,12 @@ int waitx(int *wtime, int *rtime)
         }
       }
     }
-    cprintf("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n just running and runnable process(sort by mem sizw)\n");
+  /*  cprintf("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n just running and runnable process(sort by mem sizw)\n");
     for (int k = 0; k < cnt; k++)
     {
         cprintf("pid:  %d           memeory size:  %d         \n ", R_proc[k].pid, R_proc[k].memsize);
     }
-
+*/
 
             // try to create dynamic array
             // problem: it has not realloc function
@@ -791,16 +791,19 @@ int waitx(int *wtime, int *rtime)
 int set_priority(int pid, int priority)
 {
   struct proc *p;
-
+  int pi=0;
   acquire(&ptable.lock);
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
   {
     if (p->pid == pid)
     {
+      pi = p->priority;
       p->priority = priority;
       break;
     }
   }
   release(&ptable.lock);
+  if( pi < priority)
+    yield();
   return p->priority;
 }
