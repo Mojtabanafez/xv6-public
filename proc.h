@@ -53,6 +53,7 @@ struct proc {
 
   //neww field ==> phase_2
   int stime, etime, rtime, iotime;
+  int priority; // Process priority
 };
 
 // Process memory is laid out contiguously, low addresses first:

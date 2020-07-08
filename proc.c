@@ -92,6 +92,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->priority = 60;
 
   release(&ptable.lock);
 
@@ -344,8 +345,12 @@ int waitx(int *wtime, int *rtime)
         if (p->state == ZOMBIE)
         {
           // Found one.
+          // new change phase_2
           *wtime = p->etime - p->stime - p->rtime - p->iotime;
           *rtime = p->rtime;
+          
+          
+          
           pid = p->pid;
           kfree(p->kstack);
           p->kstack = 0;
@@ -353,6 +358,7 @@ int waitx(int *wtime, int *rtime)
           p->pid = 0;
           p->parent = 0;
           p->name[0] = 0;
+          p->priority = 0;
           p->killed = 0;
           p->state = UNUSED;
           release(&ptable.lock);
@@ -372,6 +378,66 @@ int waitx(int *wtime, int *rtime)
     }
   }
 
+  void
+  scheduler(void)
+  {
+    struct proc *p;
+    struct proc *p1;
+
+    struct cpu *c = mycpu();
+    c->proc = 0;
+
+    for (;;)
+    {
+      // Enable interrupts on this processor.
+      sti();
+      struct proc *highPriority = 0; 
+      // Loop over process table looking for process to run.
+      acquire(&ptable.lock);
+      for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+      {
+        if (p->state != RUNNABLE)
+          continue;
+        highPriority = p;
+        
+        for (p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++)
+        {
+            if(p1->state != RUNNABLE)
+              continue;
+            if(highPriority->priority > p1->priority )
+              highPriority = p1;
+        }
+        for (p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++)
+        {
+          if (p1->state != RUNNABLE)
+            continue;
+          if (highPriority->priority == p1->priority)
+          {
+              p = p1;
+
+              // Switch to chosen process.  It is the process's job
+              // to release ptable.lock and then reacquire it
+              // before jumping back to us.
+              c->proc = p;
+              switchuvm(p);
+              p->state = RUNNING;
+
+              //
+              // switch +
+              swtch(&(c->scheduler), p->context);
+              switchkvm();
+
+              // Process is done running for now.
+              // It should have changed its p->state before coming back.
+              c->proc = 0;
+            
+          }
+        }
+      }
+      release(&ptable.lock);
+    }
+  }
+
   //PAGEBREAK: 42
   // Per-CPU process scheduler.
   // Each CPU calls scheduler() after setting itself up.
@@ -380,6 +446,7 @@ int waitx(int *wtime, int *rtime)
   //  - swtch to start running that process
   //  - eventually that process transfers control
   //      via swtch back to the scheduler.
+  /*
   void
   scheduler(void)
   {
@@ -406,6 +473,8 @@ int waitx(int *wtime, int *rtime)
         switchuvm(p);
         p->state = RUNNING;
 
+      // 
+      // switch + 
         swtch(&(c->scheduler), p->context);
         switchkvm();
 
@@ -416,6 +485,10 @@ int waitx(int *wtime, int *rtime)
       release(&ptable.lock);
     }
   }
+  */
+
+
+
 
   // Enter scheduler.  Must hold only ptable.lock
   // and have changed proc->state. Saves and restores
@@ -623,19 +696,28 @@ int waitx(int *wtime, int *rtime)
     // store process
     int i = 0;
     struct proc_info *R_proc = (struct proc_info *)(cnt * (sizeof(struct proc_info)));
+    
+    cprintf("all process:\n");
+
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     {
+
       if (p->state == RUNNING)
       {
+        cprintf("pid:%d   memeory size:%d  priority:%d  name:%s state:Running\n ", p->pid, p->sz, p->priority, p->name);
         R_proc[i].pid = p->pid;
         R_proc[i].memsize = p->sz;
         i++;
       }
       else if (p->state == RUNNABLE)
       {
+        cprintf("pid:%d   memeory size:%d  priority:%d  name:%s state:runnable \n", p->pid, p->sz, p->priority, p->name);
         R_proc[i].pid = p->pid;
         R_proc[i].memsize = p->sz;
         i++;
+      }
+      else if(p->state == SLEEPING){
+          cprintf("pid:%d   memeory size:%d  priority:%d  name:%s state:sleeping \n", p->pid, p->sz, p->priority, p->name);
       }
     }
 
@@ -652,10 +734,11 @@ int waitx(int *wtime, int *rtime)
         }
       }
     }
+    cprintf("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n just running and runnable process(sort by mem sizw)\n");
     for (int k = 0; k < cnt; k++)
     {
-      cprintf("pid:  %d           memeory size:  %d         \n ", R_proc[k].pid, R_proc[k].memsize);
-   }
+        cprintf("pid:  %d           memeory size:  %d         \n ", R_proc[k].pid, R_proc[k].memsize);
+    }
 
 
             // try to create dynamic array
