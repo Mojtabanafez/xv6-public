@@ -100,7 +100,7 @@ exec(char *path, char **argv)
   curproc->tf->eip = elf.entry;  // main
   curproc->tf->esp = sp;
   // new in phase_2
-  curproc->priority =3;
+  curproc->priority =0;
   switchuvm(curproc);
   freevm(oldpgdir);
   return 0;

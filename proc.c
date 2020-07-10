@@ -9,6 +9,10 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+  // Three queues, for each priority level
+  struct proc *que[3][NPROC];
+  // number of processes in each queue
+  int priCount[3];
 } ptable;
 struct proc_info
 {
@@ -28,6 +32,9 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  ptable.priCount[0] = -1;
+  ptable.priCount[1] = -1;
+  ptable.priCount[2] = -1;
 }
 
 // Must be called with interrupts disabled
@@ -92,7 +99,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->priority = 60;
+  p->priority = 0;
 
   release(&ptable.lock);
 
@@ -158,6 +165,9 @@ userinit(void)
   // run this process. the acquire forces the above
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
+  ptable.priCount[0]++;
+  ptable.que[0][ptable.priCount[0]] = p;
+  
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
@@ -225,7 +235,8 @@ fork(void)
   pid = np->pid;
 
   acquire(&ptable.lock);
-
+  ptable.priCount[0]++;
+  ptable.que[0][ptable.priCount[0]] = np;
   np->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -377,7 +388,73 @@ int waitx(int *wtime, int *rtime)
       sleep(curproc, &ptable.lock); //DOC: wait-sleep
     }
   }
+  void
+  scheduler(void)
+  {
+    struct proc *proc = myproc();
+    struct cpu *cpu = mycpu();
+    //cpu->proc = 0;
+    for (;;)
+    {
+      // Enable interrupts on this processor.
+      sti();
 
+      // Loop over process table looking for process to run.
+      acquire(&ptable.lock);
+      int priority;
+      for (priority = 0; priority <= 2; priority++)
+      {
+        while (ptable.priCount[priority] > -1)
+        {
+          if(priority==0){
+            int i;
+            int index = 0;
+            proc = ptable.que[priority][0];
+            float ratio = (proc->rtime *1.0)/ ((proc->stime - ticks)*1.0 / ptable.priCount[priority]);
+            for (i = 1; i < ptable.priCount[priority]; i++)
+            {
+              float a_ratio = (ptable.que[priority][i]->rtime*1.0) / (((ptable.que[priority][i]->stime - ticks) *1.0) / ptable.priCount[priority]);
+              if(a_ratio<ratio){
+                proc = ptable.que[priority][i];
+                index = i;
+                ratio = (proc->rtime * 1.0) / ((proc->stime - ticks) * 1.0 / ptable.priCount[priority]);
+              }
+            }
+            for (i = index; i < ptable.priCount[priority]; i++)
+            {
+              ptable.que[priority][i] = ptable.que[priority][i + 1];
+            }
+          }else if(priority==1){
+            proc = ptable.que[priority][0];
+            int i;
+            for (i = 0; i < ptable.priCount[priority]; i++)
+            {
+              ptable.que[priority][i] = ptable.que[priority][i + 1];
+            }
+          }else if(priority==2){
+            proc = ptable.que[priority][0];
+            int i;
+            for (i = 0; i < ptable.priCount[priority]; i++)
+            {
+              ptable.que[priority][i] = ptable.que[priority][i + 1];
+            }
+          }else{break;}
+
+          ptable.priCount[priority]--;
+          cpu->proc = proc;
+          switchuvm(proc);
+          proc->state = RUNNING;
+          swtch(&cpu->scheduler, proc->context);
+          switchkvm();
+          proc =0;
+          cpu->proc = 0;
+          priority = 0;
+        }
+      }
+      release(&ptable.lock);
+    }
+  }
+/*
   void
   scheduler(void)
   {
@@ -437,7 +514,7 @@ int waitx(int *wtime, int *rtime)
       release(&ptable.lock);
     }
   }
-
+*/
   //PAGEBREAK: 42
   // Per-CPU process scheduler.
   // Each CPU calls scheduler() after setting itself up.
@@ -521,6 +598,11 @@ int waitx(int *wtime, int *rtime)
   yield(void)
   {
     acquire(&ptable.lock); //DOC: yieldlock
+    if (myproc()->priority < 2)
+      myproc()->priority++;
+    ptable.priCount[myproc()->priority]++;
+    ptable.que[myproc()->priority][ptable.priCount[myproc()->priority]] = myproc();
+
     myproc()->state = RUNNABLE;
     sched();
     release(&ptable.lock);
@@ -599,7 +681,11 @@ int waitx(int *wtime, int *rtime)
 
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
       if (p->state == SLEEPING && p->chan == chan)
+      {
+        ptable.priCount[p->priority]++;
+        ptable.que[p->priority][ptable.priCount[p->priority]] = p;
         p->state = RUNNABLE;
+      }
   }
 
   // Wake up all processes sleeping on chan.
@@ -626,7 +712,11 @@ int waitx(int *wtime, int *rtime)
         p->killed = 1;
         // Wake process from sleep if necessary.
         if (p->state == SLEEPING)
+        {
+          ptable.priCount[p->priority]++;
+          ptable.que[p->priority][ptable.priCount[p->priority]] = p;
           p->state = RUNNABLE;
+        }
         release(&ptable.lock);
         return 0;
       }
@@ -806,4 +896,40 @@ int set_priority(int pid, int priority)
   if( pi < priority)
     yield();
   return p->priority;
+}
+void resetPriority(void)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+  {
+    if (p->state == RUNNABLE)
+    {
+      //delete the runnable process from its original queue
+      int token;
+      for (token = 0; token < NPROC; token++)
+      {
+        if (p == ptable.que[p->priority][token])
+        {
+          int i;
+          for (i = token; i < ptable.priCount[p->priority]; i++)
+          {
+            ptable.que[p->priority][i] = ptable.que[p->priority][i + 1];
+          }
+          ptable.priCount[p->priority]--;
+        }
+        break;
+      }
+      //set the priority to 0, and add it to the first queue
+      p->priority = 0;
+      ptable.priCount[0]++;
+      ptable.que[0][ptable.priCount[0]] = p;
+    }
+    else
+    {
+      // change the priority of process that are in runnable state,is enough.
+      p->priority = 0;
+    }
+  }
+  release(&ptable.lock);
 }

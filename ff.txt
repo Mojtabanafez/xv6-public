@@ -1,0 +1,17 @@
+int i;
+            int index = 0;
+            proc = ptable.que[priority][0];
+            float ratio = proc->rtime / ((proc->stime - ticks) / ptable.priCount[priority]);
+            for (i = 1; i < ptable.priCount[priority]; i++)
+            {
+              float a_ratio = ptable.que[priority][i]->rtime / ((ptable.que[priority][i]->stime - ticks) / ptable.priCount[priority]);
+              if(a_ratio<ratio){
+                proc = ptable.que[priority][i];
+                index = i;
+                ratio = proc->rtime / ((proc->stime - ticks) / ptable.priCount[priority]);
+              }
+            }
+            for (i = index; i < ptable.priCount[priority]; i++)
+            {
+              ptable.que[priority][i] = ptable.que[priority][i + 1];
+            }

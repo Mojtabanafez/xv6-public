@@ -6,7 +6,7 @@
 int main(int argc, char *argv[])
 {
     int value, pid;
-    
+
     if (argc < 2)
     {
         printf(2, "Usage: nice [pid] [priority or tickets]\n");
@@ -15,9 +15,9 @@ int main(int argc, char *argv[])
     pid = atoi(argv[1]);
     value = atoi(argv[2]);
 
-    if (value < 1 || value > 100)
+    if (value < 0 || value > 2)
     {
-        printf(2, "Invalid priority (1-100)!\n");
+        printf(2, "Invalid priority (0-2)!\n");
         exit();
     }
     set_priority(pid, value);
